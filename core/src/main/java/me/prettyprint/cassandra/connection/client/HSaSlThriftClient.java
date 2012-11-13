@@ -83,10 +83,10 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
      */
     public HSaSlThriftClient open() {
       if ( isOpen() ) {
-        throw new IllegalStateException("Open called on already open connection. You should not have gotten here.");
+        throw new IllegalStateException("Open called on already open SASL connection. You should not have gotten here.");
       }
       if ( log.isDebugEnabled() ) {
-        log.debug("Creating a new thrift connection to {}", cassandraHost);
+        log.debug("Creating a new SASL thrift connection to {}", cassandraHost);
       }
       
       TSocket socket;    
