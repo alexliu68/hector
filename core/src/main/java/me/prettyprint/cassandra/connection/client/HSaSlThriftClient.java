@@ -59,7 +59,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
     /**
      * Constructor
      * @param cassandraHost
-     * @param servicePrincipalName
+     * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      */
     public HSaSlThriftClient(CassandraHost cassandraHost, String servicePrincipalName) {
       super(cassandraHost);
@@ -69,7 +69,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
     /**
      * Constructor
      * @param cassandraHost
-     * @param servicePrincipalName
+     * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      * @param params
      */
     public HSaSlThriftClient(CassandraHost cassandraHost, String servicePrincipalName, TSSLTransportParameters params) {
@@ -114,7 +114,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
 
       boolean success = false;
       try {
-          openKerberosTransport((TSocket) transport, servicePrincipalName);
+          openKerberosTransport(transport, servicePrincipalName);
           success = true;
       } catch (LoginException e) {
           log.error("kerberos login failed.", e);
@@ -130,7 +130,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
       return this;
     }
     
-    public static TTransport openKerberosTransport(TSocket socket, String kerberosServicePrincipal) throws LoginException, TTransportException {
+    public static TTransport openKerberosTransport(TTransport socket, String kerberosServicePrincipal) throws LoginException, TTransportException {
         try {
             log.debug("Opening kerberos transport...");
             Subject kerberosTicket = new Subject();

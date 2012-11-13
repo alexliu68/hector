@@ -44,15 +44,17 @@ public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
     public HKerberosSaSlThriftClientFactoryImpl() {
 
       params = SSLHelper.getTSSLTransportParameters();
-      
-      log.info("SSL enabled for client<->server communications.");
-      log.info("Properties:");
-      log.info("  ssl.truststore = {}", System.getProperty("ssl.truststore"));
-      log.info("  ssl.protocol = {}", System.getProperty("ssl.protocol"));
-      log.info("  ssl.store.type = {}", System.getProperty("ssl.store.type"));
-      log.info("  ssl.cipher.suites = {}", System.getProperty("ssl.cipher.suites")); 
+      if (params != null) {
+        log.info("SSL Properties:");
+        log.info("  ssl.truststore = {}", System.getProperty("ssl.truststore"));
+        log.info("  ssl.protocol = {}", System.getProperty("ssl.protocol"));
+        log.info("  ssl.store.type = {}", System.getProperty("ssl.store.type"));
+        log.info("  ssl.cipher.suites = {}", System.getProperty("ssl.cipher.suites")); 
+      }
       
       krbServicePrincipalName = System.getProperty("kerberos.service.principal.name");
+      log.info("kerberos Properties:");
+      log.info("  kerberos.service.principal.name = {}", krbServicePrincipalName); 
     }
 
     /**
