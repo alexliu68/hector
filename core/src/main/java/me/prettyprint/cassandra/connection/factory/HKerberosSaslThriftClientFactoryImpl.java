@@ -26,11 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import me.prettyprint.cassandra.connection.client.HClient;
 import me.prettyprint.cassandra.connection.client.HKerberosThriftClient;
-import me.prettyprint.cassandra.connection.client.HSaSlThriftClient;
+import me.prettyprint.cassandra.connection.client.HSaslThriftClient;
 import me.prettyprint.cassandra.connection.security.SSLHelper;
 import me.prettyprint.cassandra.service.CassandraHost;
 
-public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
+public class HKerberosSaslThriftClientFactoryImpl implements HClientFactory {
 
 
     private static final Logger log = LoggerFactory.getLogger(HKerberosSecuredThriftClientFactoryImpl.class);
@@ -41,7 +41,7 @@ public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
     private String krbServicePrincipalName;
     private TSSLTransportParameters params;
 
-    public HKerberosSaSlThriftClientFactoryImpl() {
+    public HKerberosSaslThriftClientFactoryImpl() {
 
       params = SSLHelper.getTSSLTransportParameters();
       if (params != null) {
@@ -66,7 +66,7 @@ public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
       }
       
       return params == null ?
-                 new HSaSlThriftClient(ch, krbServicePrincipalName)
-                  : new HSaSlThriftClient(ch, krbServicePrincipalName, params);
+                 new HSaslThriftClient(ch, krbServicePrincipalName)
+                  : new HSaslThriftClient(ch, krbServicePrincipalName, params);
     }
 }

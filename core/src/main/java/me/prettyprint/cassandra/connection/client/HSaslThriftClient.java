@@ -49,9 +49,9 @@ import org.slf4j.LoggerFactory;
 
 import com.sun.security.auth.module.Krb5LoginModule;
 
-public class HSaSlThriftClient extends HThriftClient implements HClient {
+public class HSaslThriftClient extends HThriftClient implements HClient {
 
-    private static Logger log = LoggerFactory.getLogger(HSaSlThriftClient.class);
+    private static Logger log = LoggerFactory.getLogger(HSaslThriftClient.class);
 
     private String servicePrincipalName;
     private TSSLTransportParameters params;
@@ -61,7 +61,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
      * @param cassandraHost
      * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      */
-    public HSaSlThriftClient(CassandraHost cassandraHost, String servicePrincipalName) {
+    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName) {
       super(cassandraHost);
       this.servicePrincipalName = servicePrincipalName;
     }
@@ -72,7 +72,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
      * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      * @param params
      */
-    public HSaSlThriftClient(CassandraHost cassandraHost, String servicePrincipalName, TSSLTransportParameters params) {
+    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName, TSSLTransportParameters params) {
       super(cassandraHost);
       this.servicePrincipalName = servicePrincipalName;
       this.params = params;
@@ -81,7 +81,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
     /**
      * {@inheritDoc}
      */
-    public HSaSlThriftClient open() {
+    public HSaslThriftClient open() {
       if ( isOpen() ) {
         throw new IllegalStateException("Open called on already open SASL connection. You should not have gotten here.");
       }
