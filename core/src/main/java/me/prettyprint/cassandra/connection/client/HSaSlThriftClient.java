@@ -52,7 +52,7 @@ import com.sun.security.auth.module.Krb5LoginModule;
 public class HSaSlThriftClient extends HThriftClient implements HClient {
 
     private static Logger log = LoggerFactory.getLogger(HSaSlThriftClient.class);
-    
+
     private String servicePrincipalName;
     private TSSLTransportParameters params;
 
@@ -77,7 +77,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
       this.servicePrincipalName = servicePrincipalName;
       this.params = params;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -88,16 +88,16 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
       if ( log.isDebugEnabled() ) {
         log.debug("Creating a new SASL thrift connection to {}", cassandraHost);
       }
-      
-      TSocket socket;    
+
+      TSocket socket;
       try {
-          socket = params == null ? 
+        socket = params == null ?
                                   new TSocket(cassandraHost.getHost(), cassandraHost.getPort(), timeout)
                                   : TSSLTransportFactory.getClientSocket(cassandraHost.getHost(), cassandraHost.getPort(), timeout, params);
       } catch (TTransportException e) {
-          throw new HectorTransportException("Could not get client socket: ", e);
+        throw new HectorTransportException("Could not get client socket: ", e);
       }
-              
+
       if ( cassandraHost.getUseSocketKeepalive() ) {
         try {
           socket.getSocket().setKeepAlive(true);
@@ -127,72 +127,76 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
         throw new HectorTransportException("Kerberos context couldn't be established with client.");
       }
 
+      if (cassandraHost.getUseThriftFramedTransport()) {
+        transport = new TFramedTransport(transport);
+      }
+
       return this;
     }
-    
+
     public static TTransport openKerberosTransport(TTransport socket, String kerberosServicePrincipal) throws LoginException, TTransportException {
-        try {
-            log.debug("Opening kerberos transport...");
-            Subject kerberosTicket = new Subject();
-            LoginContext login = new LoginContext("Client", kerberosTicket, null, new KerberosUserConfiguration());
-            login.login();
+      try {
+        log.debug("Opening kerberos transport...");
+        Subject kerberosTicket = new Subject();
+        LoginContext login = new LoginContext("Client", kerberosTicket, null, new KerberosUserConfiguration());
+        login.login();
 
-            String names[] = kerberosServicePrincipal.split("[/@]");
+        String names[] = kerberosServicePrincipal.split("[/@]");
 
-            if (names.length != 3) {
-                throw new IOException("Kerberos principal name does NOT have the expected hostname part: "+ kerberosServicePrincipal);
+        if (names.length != 3) {
+          throw new IOException("Kerberos principal name does NOT have the expected hostname part: "+ kerberosServicePrincipal);
+        }
+
+        final TSaslClientTransport transport = new TSaslClientTransport(
+            "GSSAPI",
+            null,
+            names[0], names[1],
+            SASL_PROPS, null,
+            socket);
+
+        Subject.doAs(kerberosTicket, new PrivilegedAction<Void>() {
+
+          @Override
+          public Void run() {
+            try {
+              transport.open();
+            } catch (TTransportException e) {
+              throw new RuntimeException("Unable to connect to dse server:", e);
             }
 
-            final TSaslClientTransport transport = new TSaslClientTransport(
-                    "GSSAPI",
-                    null,
-                    names[0], names[1],
-                    SASL_PROPS, null,
-                    socket);
+            return null;
+          }
+        });
 
-            Subject.doAs(kerberosTicket, new PrivilegedAction<Void>() {
-
-                @Override
-                public Void run() {
-                    try {
-                        transport.open();
-                    } catch (TTransportException e) {
-                        throw new RuntimeException("Unable to connect to dse server:", e);
-                    }
-
-                    return null;
-                }
-            });
-
-            log.debug("Kerberos transport opened successfully");
-            return new TFramedTransport(transport);
-        } catch (IOException e) {
-            throw new TTransportException("Failed to open secure transport using KERBEROS", e);
-        }
+        log.debug("Kerberos transport opened successfully");
+        return transport;
+      } catch (IOException e) {
+        throw new TTransportException("Failed to open secure transport using KERBEROS", e);
+      }
     }
 
 
     public static class KerberosUserConfiguration extends javax.security.auth.login.Configuration {
 
-        private static final Map<String, String> USER_KERBEROS_OPTIONS =
-                new HashMap<String, String>();
-        static {
-            USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-            USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-            USER_KERBEROS_OPTIONS.put("renewTGT", "true");
-            String ticketCache = System.getenv("KRB5CCNAME");
-            if (ticketCache != null)
-                USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+      private static final Map<String, String> USER_KERBEROS_OPTIONS =
+          new HashMap<String, String>();
+      static {
+        USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+        USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+        String ticketCache = System.getenv("KRB5CCNAME");
+        if (ticketCache != null)
+          USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
         }
-        
+
         private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
-                new AppConfigurationEntry(Krb5LoginModule.class.getName(),
-                        AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL,
-                        USER_KERBEROS_OPTIONS);
+            new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+                    AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL,
+                    USER_KERBEROS_OPTIONS);
 
         @Override
         public AppConfigurationEntry[] getAppConfigurationEntry(String arg0) {
-            return new AppConfigurationEntry[] { USER_KERBEROS_LOGIN };
+          return new AppConfigurationEntry[] { USER_KERBEROS_LOGIN };
         }
     }
 
