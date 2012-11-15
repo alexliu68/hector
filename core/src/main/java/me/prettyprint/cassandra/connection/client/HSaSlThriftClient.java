@@ -197,7 +197,7 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
     }
 
     public static final Map<String, String> SASL_PROPS = new TreeMap<String, String>() {{
-        SASL_PROPS.put(Sasl.QOP, "auth");
-        SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+      put(Sasl.QOP, "auth");
+      put(Sasl.SERVER_AUTH, "true");
     }};
 }
