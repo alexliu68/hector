@@ -106,19 +106,16 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
         }
       }
 
-      boolean success = false;
       try {
         transport = openKerberosTransport(socket, servicePrincipalName);
-        success = true;
       } catch (LoginException e) {
-        log.error("kerberos login failed.", e);
-      } catch (TTransportException e1) {
-        log.error("Failed to open kerberos transport.", e1);
-      }
-
-      if (!success) {
+        log.error("Kerberos login failed: ", e);
         close();
-        throw new HectorTransportException("Kerberos context couldn't be established with client.");
+        throw new HectorTransportException("Kerberos context couldn't be established with client: ", e);
+      } catch (TTransportException e) {
+        log.error("Failed to open Kerberos transport.", e);
+        close();
+        throw new HectorTransportException("Kerberos context couldn't be established with client: ", e);
       }
 
       if (cassandraHost.getUseThriftFramedTransport()) {
