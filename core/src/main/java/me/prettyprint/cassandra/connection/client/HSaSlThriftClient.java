@@ -132,10 +132,12 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
         LoginContext login = new LoginContext("Client", kerberosTicket, null, new KerberosUserConfiguration());
         login.login();
 
-        String names[] = kerberosServicePrincipal.split("[/@]");
+        // pull the domain portion out, if there is one
+        String nonDomainName = kerberosServicePrincipal.split("@")[0];
+        String names[] = nonDomainName.split("[/]");
 
-        if (names.length != 3) {
-          throw new IOException("Kerberos principal name does NOT have the expected hostname part: "+ kerberosServicePrincipal);
+        if (names.length != 2) {
+          throw new IOException("Kerberos principal name does NOT have the expected hostname part: " + kerberosServicePrincipal);
         }
 
         final TSaslClientTransport transport = new TSaslClientTransport(
