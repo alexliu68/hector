@@ -106,20 +106,14 @@ public class HSaSlThriftClient extends HThriftClient implements HClient {
         }
       }
 
-      if (cassandraHost.getUseThriftFramedTransport()) {
-        transport = new TFramedTransport(socket);
-      } else {
-        transport = socket;
-      }
-
       boolean success = false;
       try {
-          openKerberosTransport(transport, servicePrincipalName);
-          success = true;
+        transport = openKerberosTransport(socket, servicePrincipalName);
+        success = true;
       } catch (LoginException e) {
-          log.error("kerberos login failed.", e);
+        log.error("kerberos login failed.", e);
       } catch (TTransportException e1) {
-          log.error("Failed to open kerberos transport.", e1);
+        log.error("Failed to open kerberos transport.", e1);
       }
 
       if (!success) {
