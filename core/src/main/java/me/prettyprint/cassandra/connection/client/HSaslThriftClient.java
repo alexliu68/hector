@@ -54,6 +54,7 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
     private static Logger log = LoggerFactory.getLogger(HSaslThriftClient.class);
 
     private String servicePrincipalName;
+    private String clientPrincipalName;
     private TSSLTransportParameters params;
 
     /**
@@ -61,9 +62,10 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
      * @param cassandraHost
      * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      */
-    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName) {
+    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName, String clientPrincipalName) {
       super(cassandraHost);
       this.servicePrincipalName = servicePrincipalName;
+      this.clientPrincipalName = clientPrincipalName;
     }
 
     /**
@@ -72,9 +74,10 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
      * @param servicePrincipalName, name/_HOST@DOMAIN,  e.g. mapred/bdplab0.datastax.com@EXAMPLE.COM
      * @param params
      */
-    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName, TSSLTransportParameters params) {
+    public HSaslThriftClient(CassandraHost cassandraHost, String servicePrincipalName, String clientPrincipalName, TSSLTransportParameters params) {
       super(cassandraHost);
       this.servicePrincipalName = servicePrincipalName;
+      this.clientPrincipalName = clientPrincipalName;
       this.params = params;
     }
 
@@ -107,7 +110,7 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
       }
 
       try {
-        transport = openKerberosTransport(socket, servicePrincipalName);
+        transport = openKerberosTransport(socket, servicePrincipalName, clientPrincipalName);
       } catch (LoginException e) {
         log.error("Kerberos login failed: ", e);
         close();
@@ -125,11 +128,12 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
       return this;
     }
 
-    public static TTransport openKerberosTransport(TTransport socket, String kerberosServicePrincipal) throws LoginException, TTransportException {
+    public static TTransport openKerberosTransport(TTransport socket, String kerberosServicePrincipal, String kerberosClientPrincipal) throws LoginException, TTransportException {
       try {
         log.debug("Opening kerberos transport...");
         Subject kerberosTicket = new Subject();
-        LoginContext login = new LoginContext("Client", kerberosTicket, null, new KerberosUserConfiguration());
+        KerberosUserConfiguration kerberosConfig = new KerberosUserConfiguration(kerberosClientPrincipal);
+        LoginContext login = new LoginContext("Client", kerberosTicket, null, kerberosConfig);
         login.login();
 
         // pull the domain portion out, if there is one
@@ -171,26 +175,34 @@ public class HSaslThriftClient extends HThriftClient implements HClient {
 
     public static class KerberosUserConfiguration extends javax.security.auth.login.Configuration {
 
-      private static final Map<String, String> USER_KERBEROS_OPTIONS =
+      private static final HashMap<String, String> DEFAULT_KERBEROS_OPTIONS =
           new HashMap<String, String>();
+
       static {
-        USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
-        USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
-        USER_KERBEROS_OPTIONS.put("renewTGT", "true");
+        DEFAULT_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+        DEFAULT_KERBEROS_OPTIONS.put("useTicketCache", "true");
+        DEFAULT_KERBEROS_OPTIONS.put("renewTGT", "true");
         String ticketCache = System.getenv("KRB5CCNAME");
         if (ticketCache != null)
-          USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
-        }
+          DEFAULT_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
+      }
 
-        private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
-            new AppConfigurationEntry(Krb5LoginModule.class.getName(),
-                    AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL,
-                    USER_KERBEROS_OPTIONS);
+      private HashMap<String, String> options;
 
-        @Override
-        public AppConfigurationEntry[] getAppConfigurationEntry(String arg0) {
-          return new AppConfigurationEntry[] { USER_KERBEROS_LOGIN };
-        }
+      public KerberosUserConfiguration(String clientPrincipalName) {
+        this.options = new HashMap<String, String>(DEFAULT_KERBEROS_OPTIONS);
+        if (clientPrincipalName != null)
+          this.options.put("principal", clientPrincipalName);
+      }
+
+      @Override
+      public AppConfigurationEntry[] getAppConfigurationEntry(String arg0) {
+        AppConfigurationEntry kerberosLogin = new AppConfigurationEntry(
+            Krb5LoginModule.class.getName(),
+            AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL,
+            this.options);
+        return new AppConfigurationEntry[] { kerberosLogin };
+      }
     }
 
     public static final Map<String, String> SASL_PROPS = new TreeMap<String, String>() {{
