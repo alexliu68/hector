@@ -26,11 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import me.prettyprint.cassandra.connection.client.HClient;
 import me.prettyprint.cassandra.connection.client.HKerberosThriftClient;
-import me.prettyprint.cassandra.connection.client.HSaSlThriftClient;
+import me.prettyprint.cassandra.connection.client.HSaslThriftClient;
 import me.prettyprint.cassandra.connection.security.SSLHelper;
 import me.prettyprint.cassandra.service.CassandraHost;
 
-public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
+public class HKerberosSaslThriftClientFactoryImpl implements HClientFactory {
 
 
     private static final Logger log = LoggerFactory.getLogger(HKerberosSecuredThriftClientFactoryImpl.class);
@@ -39,22 +39,27 @@ public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
     public static final String KRB5_CONFIG = "krb5.conf";
 
     private String krbServicePrincipalName;
+    private String krbClientPrincipalName;
     private TSSLTransportParameters params;
 
-    public HKerberosSaSlThriftClientFactoryImpl() {
+    public HKerberosSaslThriftClientFactoryImpl() {
 
       params = SSLHelper.getTSSLTransportParameters();
       if (params != null) {
-        log.info("SSL Properties:");
-        log.info("  ssl.truststore = {}", System.getProperty("ssl.truststore"));
-        log.info("  ssl.protocol = {}", System.getProperty("ssl.protocol"));
-        log.info("  ssl.store.type = {}", System.getProperty("ssl.store.type"));
-        log.info("  ssl.cipher.suites = {}", System.getProperty("ssl.cipher.suites")); 
+        log.debug("SSL properties:");
+        log.debug("  ssl.truststore = {}", System.getProperty("ssl.truststore"));
+        log.debug("  ssl.protocol = {}", System.getProperty("ssl.protocol"));
+        log.debug("  ssl.store.type = {}", System.getProperty("ssl.store.type"));
+        log.debug("  ssl.cipher.suites = {}", System.getProperty("ssl.cipher.suites")); 
       }
-      
+
       krbServicePrincipalName = System.getProperty("kerberos.service.principal.name");
-      log.info("kerberos Properties:");
-      log.info("  kerberos.service.principal.name = {}", krbServicePrincipalName); 
+      krbClientPrincipalName = System.getProperty("kerberos.client.principal.name");
+      if (krbServicePrincipalName != null) {
+        log.debug("Kerberos properties:");
+        log.debug("  kerberos.service.principal.name = {}", krbServicePrincipalName);
+        log.debug("  kerberos.client.principal.name = {}", krbClientPrincipalName);
+      }
     }
 
     /**
@@ -64,9 +69,10 @@ public class HKerberosSaSlThriftClientFactoryImpl implements HClientFactory {
       if (log.isDebugEnabled()) {
         log.debug("Creation of new client");
       }
-      
-      return params == null ?
-                 new HSaSlThriftClient(ch, krbServicePrincipalName)
-                  : new HSaSlThriftClient(ch, krbServicePrincipalName, params);
+
+      if (params == null)
+        return new HSaslThriftClient(ch, krbServicePrincipalName, krbClientPrincipalName);
+      else
+        return new HSaslThriftClient(ch, krbServicePrincipalName, krbClientPrincipalName, params);
     }
 }
